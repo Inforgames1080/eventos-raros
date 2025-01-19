@@ -1,0 +1,61 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Carregar o arquivo CSV
+file_path = 'dadosfut.csv'  # Substitua pelo caminho correto
+df = pd.read_csv(file_path)
+
+# Ajustar cabeçalhos e remover linhas desnecessárias
+df.columns = df.iloc[1]  # Usar a segunda linha como cabeçalhos
+df = df[2:]  # Remover as duas primeiras linhas
+
+# Renomear colunas relevantes
+df.columns = [
+    "Evento", "Data", "Lucro/Prejuízo", "Detalhes", "Acumulado", 
+    "Col6", "Col7", "Col8", "Col9", "Col10", "Col11", "Col12", "Col13", "Col14", "Col15", "Col16", "Col17"
+]
+df = df[["Evento", "Data", "Lucro/Prejuízo", "Acumulado"]]  # Manter colunas relevantes
+
+# Função para converter valores monetários em numéricos
+def converter_monetario(valor):
+    if isinstance(valor, str):
+        valor = valor.replace("R$", "").replace(".", "").replace(",", ".").replace("-", "").strip()
+        valor = valor.replace(" ", "")  # Remover espaços adicionais
+        if valor.startswith("(") and valor.endswith(")"):  # Tratar parênteses como valores negativos
+            valor = "-" + valor[1:-1]
+        return float(valor) if valor else 0.0
+    return valor
+
+# Converter colunas 'Lucro/Prejuízo' e 'Acumulado' para numéricos
+df["Lucro/Prejuízo"] = df["Lucro/Prejuízo"].apply(converter_monetario)
+df["Acumulado"] = df["Acumulado"].apply(converter_monetario)
+
+# Converter a coluna 'Data' para o formato datetime
+df["Data"] = pd.to_datetime(df["Data"], errors="coerce")  # Tentar converter diretamente
+
+# Filtrar os dados para valores válidos e positivos de lucro
+df_filtrado = df[df["Lucro/Prejuízo"] > 0]
+
+# Exibir tabela filtrada
+print("Tabela filtrada:")
+print(df_filtrado)
+
+# Criar um gráfico de barras para os 10 principais eventos com maior lucro
+df_top10 = df_filtrado.sort_values(by="Lucro/Prejuízo", ascending=False).head(10)
+plt.figure(figsize=(12, 6))
+sns.barplot(data=df_top10, x="Lucro/Prejuízo", y="Evento", palette="viridis")
+plt.title("Top 10 Eventos com Maior Lucro")
+plt.xlabel("Lucro/Prejuízo (R$)")
+plt.ylabel("Evento")
+plt.show()
+
+# Criar gráfico de linha para o acumulado ao longo do tempo
+df_temporal = df.dropna(subset=["Data"]).sort_values(by="Data")  # Garantir que as datas sejam válidas
+
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=df_temporal, x="Data", y="Acumulado", marker="o", color="blue")
+plt.title("Evolução do Acumulado ao Longo do Tempo")
+plt.xlabel("Data")
+plt.ylabel("Acumulado (R$)")
+plt.show()
